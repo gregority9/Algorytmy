@@ -122,31 +122,33 @@ String* add(String* A, String* B, int carry = 0) {
 
 
 String* subtract(String* A, String* B, int borrow = 0) {
-    if (A == nullptr) return nullptr;
+    if (!A || A->znak == 0 || A->znak == '-') {
+        return nullptr;
+    }
 
     int digitA = A->znak - '0' - borrow;
-    int digitB = (B != nullptr) ? B->znak - '0' : 0;
+    int digitB = B ? B->znak - '0' : 0;
 
     if (digitA < digitB) {
         digitA += 10;
         borrow = 1;
-    } else {
+    }
+    else {
         borrow = 0;
     }
 
-    String* result = new String(digitA - digitB + '0');
-    
-    String* nextA = (A->next != nullptr) ? A->next : nullptr;
-    String* nextB = (B != nullptr && B->next != nullptr) ? B->next : nullptr;
+    int diff = digitA - digitB;
+    char newDigit = diff + '0';
 
-    result->next = subtract(nextA, nextB, borrow);
+    String* nextA = A->next;
+    String* nextB = (B != nullptr && B->next != nullptr && B->next->znak != 0 && B->next->znak != '-') ? B->next : nullptr;
 
-    // Usuń wiodące zera (ale zostaw przynajmniej jedną cyfrę)
-    if (result->next == nullptr && result->znak == '0') {
+    String* result = new String(newDigit, subtract(nextA, nextB, borrow));
+
+    if (!result->next && result->znak == '0') {
         delete result;
-        return nullptr;
+        return nullptr; // Remove leading zero
     }
-    
     return result;
 }
 
@@ -198,16 +200,37 @@ String* hard_math(String* A, String* B) { //dodawanie
     if (sizeA < sizeB) {
         wiekszy = -1;
     }
-    else if (sizeA > sizeB) {
+    else if (sizeA > sizeB){
         wiekszy = 1;
     }
     else {
-        if(sizeA != 1)
+        if (sizeA != 1)
             wiekszy = findWiekszy(A, B);
         else {
-            if (A->znak > B->znak) wiekszy = 1;
-            else if (B->znak > A->znak) wiekszy = -1;
-            else wiekszy = 0;
+                if (A->znak > B->znak) wiekszy = 1;
+                else if (B->znak > A->znak) wiekszy = -1;
+                else wiekszy = 0;
+        }
+    }
+
+    if (sizeA == 1 && sizeB == 1) {
+        if (minusA == 0 && minusB == 0) return add(A, B);
+        if (minusA == 1 && minusB == 1) return addMinus(add(A, B));
+        if (minusA == 1 && minusB == 0) {
+            if (wiekszy == 1) {
+                return addMinus(new String(A->znak - B->znak + '0', new String(0, nullptr)));
+            }
+            else {
+                return new String(B->znak - A->znak + 48, new String(0, nullptr));
+            }
+        }
+        if (minusA == 0 && minusB == 1) {
+            if (wiekszy == 1 || wiekszy == 0) {
+                return new String(A->znak - B->znak + '0', new String(0, nullptr));
+            }
+            else {
+                return addMinus(new String(B->znak - A->znak + '0', new String(0, nullptr)));
+            }
         }
     }
 
@@ -216,17 +239,6 @@ String* hard_math(String* A, String* B) { //dodawanie
     if (minusA == 1 && minusB == 0) return wiekszy == 1 ? addMinus(subtract(A, B)) : subtract(B, A);
     if (minusA == 0 && minusB == 1) return wiekszy != -1 ? subtract(A, B) : addMinus(subtract(B, A));
 }
-
-int createInt(String* a) {
-    if (a->next != nullptr && a->next->znak != NULL) {
-        int pom = createInt(a->next);
-        return pom * 10 + a->znak - '0';
-    }
-    else {
-        return a->znak - '0';
-    }
-}
-
 String* copyString(String* a) { //kopiowanie stringa
     if (a->next != nullptr) {
         String* pom = new String(a->znak, copyString(a->next));
@@ -271,47 +283,47 @@ String* merge(String* a, String* b) {
 
 
 bool whetherEqualZero(String* A) {
-	if (A == nullptr || A->znak == 0) return true;
-	if (A->znak == '0' || A->znak == '-') return whetherEqualZero(A->next);
-	else return false;
+    if (A == nullptr || A->znak == 0) return true;
+    if (A->znak == '0' || A->znak == '-') return whetherEqualZero(A->next);
+    else return false;
 }
 
 bool isEmpty(String* A) {
-	if (A == nullptr || A->znak == 0) return true;
-	if (A->znak == '0' && (A->next == nullptr || A->next->znak == 0)) return true;
-	else return false;
+    if (A == nullptr || A->znak == 0) return true;
+    if (A->znak == '0' && (A->next == nullptr || A->next->znak == 0)) return true;
+    else return false;
 }
 
 int Compare(String* A, String* B) { // 1-A>b, -1-A<B, 0-A=B
     int wsk = 0;
     char znak;
     bool isZeroA = whetherEqualZero(A);
-	bool isZeroB = whetherEqualZero(B);
-	if (isZeroA) A = new String('0', new String(0, nullptr));
-	if (isZeroB) B = new String('0', new String(0, nullptr));
+    bool isZeroB = whetherEqualZero(B);
+    if (isZeroA) A = new String('0', new String(0, nullptr));
+    if (isZeroB) B = new String('0', new String(0, nullptr));
     A = deleteZeros(A, &wsk);
     wsk = 0;
     B = deleteZeros(B, &wsk);
-	int minusA = findMinus(A);
-	int minusB = findMinus(B);
+    int minusA = findMinus(A);
+    int minusB = findMinus(B);
     int sizeA = 0, sizeB = 0;
-	findSize(A, &sizeA, &znak);
+    findSize(A, &sizeA, &znak);
     findSize(B, &sizeB, &znak);
-	minusA == 1 ? sizeA-- : sizeA;
-	minusB == 1 ? sizeB-- : sizeB;
+    minusA == 1 ? sizeA-- : sizeA;
+    minusB == 1 ? sizeB-- : sizeB;
     if (minusA && minusB) {
         if (sizeA > sizeB) {
             return -1;
-		}
-		else if (sizeA < sizeB) {
-			return 1;
-		}
-		else {
-			int pom = findWiekszy(A, B);
-			if (pom == 0) return 0;
-			else if (pom == 1) return -1;
-			else return 1;
-		}
+        }
+        else if (sizeA < sizeB) {
+            return 1;
+        }
+        else {
+            int pom = findWiekszy(A, B);
+            if (pom == 0) return 0;
+            else if (pom == 1) return -1;
+            else return 1;
+        }
     }
     else if (!minusA && !minusB) {
         if (sizeA > sizeB) {
@@ -337,7 +349,8 @@ int Compare(String* A, String* B) { // 1-A>b, -1-A<B, 0-A=B
 }
 
 int main() {
-    ifstream cin("wejscie.txt");
+    cin.tie(0); cout.tie(0);
+    ios::sync_with_stdio(0);
     cin >> noskipws;
     //wczytywanie danych
     char instructions[20000];
@@ -407,7 +420,7 @@ int main() {
         case '@': {
             String* a = top->value;
             top = pop(top);
-            int wart = createInt(a);
+            int wart = stringToInt(a);
             String* data = findString(top, wart);
             top = push(top, new Stack(data, top));
             break;
@@ -501,24 +514,24 @@ int main() {
         case '!': {
             String* a = top->value;
             if (isEmpty(a)) {
-				a = new String('1', new String(0, nullptr));
-			}
-			else {
-				a = new String('0', new String(0, nullptr));
-			}
-			top->value = a;
-			break;
+                a = new String('1', new String(0, nullptr));
+            }
+            else {
+                a = new String('0', new String(0, nullptr));
+            }
+            top->value = a;
+            break;
         }
         case '~': {
             String* newString = intToString(i);
-			Stack* newStack = new Stack(newString, top);
+            Stack* newStack = new Stack(newString, top);
             top = newStack;
-			size++;
-			break;
+            size++;
+            break;
         }
         case '?': {
             String* a = top->value;
-			top = pop(top);
+            top = pop(top);
             String* b = top->value;
             top = pop(top);
             size -= 2;
